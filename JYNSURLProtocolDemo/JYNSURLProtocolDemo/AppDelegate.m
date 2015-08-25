@@ -2,11 +2,13 @@
 //  AppDelegate.m
 //  JYNSURLProtocolDemo
 //
-//  Created by 庾高静 on 15/8/25.
+//  Created by James Yu on 15/8/25.
 //  Copyright (c) 2015年 James. All rights reserved.
 //
 
 #import "AppDelegate.h"
+#import "JYCustomDataProtocol.h"
+#import "JYCustomWebViewProtocol.h"
 
 @interface AppDelegate ()
 
@@ -17,6 +19,10 @@
 
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     // Override point for customization after application launch.
+    
+   // [NSURLProtocol registerClass:[JYCustomDataProtocol class]];
+    [NSURLProtocol registerClass:[JYCustomWebViewProtocol class]];
+    
     return YES;
 }
 
