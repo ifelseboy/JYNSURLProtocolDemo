@@ -10,6 +10,8 @@
 #import <UIKit/UIKit.h>
 #import "SDWebImageManager.h"
 #import "UIImage+MultiFormat.h"
+#import "NSData+ImageContentType.h"
+#import "UIImage+GIF.h"
 
 static NSString * const hasInitKey = @"JYCustomWebViewProtocolKey";
 
@@ -24,21 +26,23 @@ static NSString * const hasInitKey = @"JYCustomWebViewProtocolKey";
 
 + (BOOL)canInitWithRequest:(NSURLRequest *)request
 {
-    NSString *str = request.URL.path;
-    //NSLog(@"-----%@----", str);
-    if (([str hasSuffix:@".png"] || [str hasSuffix:@".jpg"] || [str hasSuffix:@".gif"]) && ![NSURLProtocol propertyForKey:hasInitKey inRequest:request]) {
-        NSLog(@"will handle");
-        return YES;
+    if ([request.URL.scheme isEqualToString:@"http"]) {
+        NSString *str = request.URL.path;
+        //只处理http请求的图片
+        if (([str hasSuffix:@".png"] || [str hasSuffix:@".jpg"] || [str hasSuffix:@".gif"])
+            && ![NSURLProtocol propertyForKey:hasInitKey inRequest:request]) {
+            
+            return YES;
+        }
     }
-    //NSLog(@"=====%@", str);
+    
     return NO;
 }
 
 + (NSURLRequest *)canonicalRequestForRequest:(NSURLRequest *)request {
     
     NSMutableURLRequest *mutableReqeust = [request mutableCopy];
-    //mutableReqeust.timeoutInterval = 40;
-    //这边可用干你想干的事情。。更改地址，或者设置里面的请求头。。
+    //这边可用干你想干的事情。。更改地址，提取里面的请求内容，或者设置里面的请求头。。
     return mutableReqeust;
 }
 
@@ -48,16 +52,14 @@ static NSString * const hasInitKey = @"JYCustomWebViewProtocolKey";
     //做下标记，防止递归调用
     [NSURLProtocol setProperty:@YES forKey:hasInitKey inRequest:mutableReqeust];
     
-    //这边就随便你玩了。。可以直接返回本地的模拟数据，进行测试
+    //查看本地是否已经缓存了图片
+    NSString *key = [[SDWebImageManager sharedManager] cacheKeyForURL:self.request.URL];
+
+    NSData *data = [[SDImageCache sharedImageCache] diskImageDataBySearchingAllPathsForKey:key];
     
-    UIImage *img = [[SDImageCache sharedImageCache] imageFromDiskCacheForKey:[mutableReqeust.URL absoluteString]];
-    
-    if (img) {
-        
-        NSData *data = UIImageJPEGRepresentation(img, 1);
-        
+    if (data) {
         NSURLResponse *response = [[NSURLResponse alloc] initWithURL:mutableReqeust.URL
-                                                            MIMEType:@""
+                                                            MIMEType:[NSData sd_contentTypeForImageData:data]
                                                expectedContentLength:data.length
                                                     textEncodingName:nil];
         [self.client URLProtocol:self
@@ -68,35 +70,6 @@ static NSString * const hasInitKey = @"JYCustomWebViewProtocolKey";
         [self.client URLProtocolDidFinishLoading:self];
     }
     else {
-        
-//        [[SDWebImageManager sharedManager] downloadImageWithURL:mutableReqeust.URL
-//                                                        options:0
-//                                                       progress:nil completed:^(UIImage *image, NSError *error, SDImageCacheType cacheType, BOOL finished, NSURL *imageURL) {
-//                                                           
-//                                                           if (error) {
-//                                                               NSLog(@"fail to load image: %@", error.description);
-//                                                           }
-//                                                           else {
-//                                                               [[SDImageCache sharedImageCache] storeImage:img forKey:[self.request.URL absoluteString]];
-//                                                               
-//                                                               NSLog(@"download success");
-//                                                               NSData *data = UIImageJPEGRepresentation(img, 1);
-//                                                               
-//                                                               NSURLResponse *response = [[NSURLResponse alloc] initWithURL:mutableReqeust.URL
-//                                                                                                                   MIMEType:@""
-//                                                                                                      expectedContentLength:data.length
-//                                                                                                           textEncodingName:nil];
-//                                                               [self.client URLProtocol:self
-//                                                                     didReceiveResponse:response
-//                                                                     cacheStoragePolicy:NSURLCacheStorageNotAllowed];
-//                                                               
-//                                                               [self.client URLProtocol:self didLoadData:data];
-//                                                               [self.client URLProtocolDidFinishLoading:self];
-//                                                           }
-//                                                           
-//                                                           
-//                                                       }];
-    
         self.connection = [NSURLConnection connectionWithRequest:mutableReqeust delegate:self];
     }
 }
@@ -128,8 +101,12 @@ static NSString * const hasInitKey = @"JYCustomWebViewProtocolKey";
 - (void)connectionDidFinishLoading:(NSURLConnection *)connection
 {
     UIImage *cacheImage = [UIImage sd_imageWithData:self.responseData];
-    
-    [[SDImageCache sharedImageCache] storeImage:cacheImage forKey:[self.request.URL absoluteString]];
+    //利用SDWebImage提供的缓存进行保存图片
+    [[SDImageCache sharedImageCache] storeImage:cacheImage
+                           recalculateFromImage:NO
+                                      imageData:self.responseData
+                                         forKey:[[SDWebImageManager sharedManager] cacheKeyForURL:self.request.URL]
+                                         toDisk:YES];
     
     [self.client URLProtocolDidFinishLoading:self];
 }

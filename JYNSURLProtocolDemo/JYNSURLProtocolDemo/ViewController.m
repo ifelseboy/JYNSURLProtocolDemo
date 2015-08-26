@@ -7,6 +7,7 @@
 //
 
 #import "ViewController.h"
+#import "UIImageView+WebCache.h"
 
 @interface ViewController ()
 
