@@ -21,6 +21,9 @@ static NSString * const hasInitKey = @"JYCustomDataProtocolKey";
 
 + (BOOL)canInitWithRequest:(NSURLRequest *)request
 {
+    if ([NSURLProtocol propertyForKey:hasInitKey inRequest:request]) {
+        return NO;
+    }
     return YES;
 }
 
@@ -38,21 +41,29 @@ static NSString * const hasInitKey = @"JYCustomDataProtocolKey";
     [NSURLProtocol setProperty:@YES forKey:hasInitKey inRequest:mutableReqeust];
     
     //这边就随便你玩了。。可以直接返回本地的模拟数据，进行测试
-    NSData *data = [[NSData alloc] init];
     
-    NSURLResponse *response = [[NSURLResponse alloc] initWithURL:mutableReqeust.URL
-                                                        MIMEType:@"text/plain"
-                                           expectedContentLength:data.length
-                                                textEncodingName:nil];
-    [self.client URLProtocol:self
-          didReceiveResponse:response
-          cacheStoragePolicy:NSURLCacheStorageNotAllowed];
+    BOOL enableDebug = NO;
     
-    [self.client URLProtocol:self didLoadData:data];
-    [self.client URLProtocolDidFinishLoading:self];
-
-    
-    self.connection = [NSURLConnection connectionWithRequest:mutableReqeust delegate:self];
+    if (enableDebug) {
+        
+        NSString *str = @"测试数据";
+        
+        NSData *data = [str dataUsingEncoding:NSUTF8StringEncoding];
+        
+        NSURLResponse *response = [[NSURLResponse alloc] initWithURL:mutableReqeust.URL
+                                                            MIMEType:@"text/plain"
+                                               expectedContentLength:data.length
+                                                    textEncodingName:nil];
+        [self.client URLProtocol:self
+              didReceiveResponse:response
+              cacheStoragePolicy:NSURLCacheStorageNotAllowed];
+        
+        [self.client URLProtocol:self didLoadData:data];
+        [self.client URLProtocolDidFinishLoading:self];
+    }
+    else {
+        self.connection = [NSURLConnection connectionWithRequest:mutableReqeust delegate:self];
+    }
 }
 
 - (void)stopLoading

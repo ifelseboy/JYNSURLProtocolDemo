@@ -20,9 +20,9 @@
 - (BOOL)application:(UIApplication *)application didFinishLaunchingWithOptions:(NSDictionary *)launchOptions {
     // Override point for customization after application launch.
     
-   // [NSURLProtocol registerClass:[JYCustomDataProtocol class]];
+    [NSURLProtocol registerClass:[JYCustomDataProtocol class]];
     [NSURLProtocol registerClass:[JYCustomWebViewProtocol class]];
-    
+
     return YES;
 }
 
